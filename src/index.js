@@ -123,42 +123,264 @@ function homePage() {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Softchahom</title>
+
 <style>
-body{margin:0;font-family:Arial,sans-serif;background:#f4f4f5;color:#111}
-.box{max-width:520px;margin:50px auto;padding:25px;text-align:center}
-h1{font-size:32px}
-.card{display:block;background:white;padding:18px;margin:14px 0;border-radius:15px;text-decoration:none;color:#111;box-shadow:0 3px 12px #0001;overflow-wrap:anywhere}
-small{color:#777}
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#f4f4f5;
+  color:#111;
+}
+
+.box{
+  max-width:520px;
+  margin:50px auto;
+  padding:25px;
+  text-align:center;
+}
+
+h1{
+  font-size:32px;
+}
+
+.card{
+  display:block;
+  background:white;
+  padding:18px;
+  margin:14px 0;
+  border-radius:15px;
+  text-decoration:none;
+  color:#111;
+  box-shadow:0 3px 12px #0001;
+  overflow-wrap:anywhere;
+}
+
+/* ปุ่มเพลง */
+.music-btn{
+  position:fixed;
+  right:18px;
+  bottom:18px;
+  width:54px;
+  height:54px;
+  border-radius:50%;
+  border:0;
+  background:#111;
+  color:white;
+  font-size:23px;
+  box-shadow:0 4px 15px #0004;
+  z-index:9999;
+  cursor:pointer;
+}
+
+.music-btn.playing{
+  animation:spin 3s linear infinite;
+}
+
+@keyframes spin{
+  from{transform:rotate(0deg)}
+  to{transform:rotate(360deg)}
+}
+
+small{
+  color:#777;
+}
 </style>
 </head>
+
 <body>
+
 <div class="box">
+
 <h1>Softchahom</h1>
+
 <p>My Links</p>
-<div id="links">กำลังโหลด...</div>
-<p><a href="/admin">Admin</a></p>
-<small>Powered by Cloudflare</small>
+
+<div id="links">
+กำลังโหลด...
 </div>
+
+<p>
+<a href="/admin">Admin</a>
+</p>
+
+<small>Powered by Cloudflare</small>
+
+</div>
+
+<!-- YouTube player -->
+<div id="youtube-player"
+     style="position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;">
+</div>
+
+<!-- ปุ่มเพลง -->
+<button
+  id="musicBtn"
+  class="music-btn"
+  onclick="toggleMusic()"
+  aria-label="เปิดปิดเพลง">
+  🎵
+</button>
+
 <script>
+
+/* =========================
+   โหลดลิงก์
+========================= */
+
 fetch('/api/links')
-.then(function(r){return r.json()})
+.then(function(r){
+  return r.json();
+})
 .then(function(data){
+
   var box=document.getElementById('links');
-  if(!data.length){box.textContent='ยังไม่มีลิงก์';return;}
+
+  if(!data.length){
+    box.textContent='ยังไม่มีลิงก์';
+    return;
+  }
+
   box.innerHTML=data.map(function(x){
+
     var a=document.createElement('a');
+
     a.className='card';
     a.href=x.url;
     a.target='_blank';
     a.rel='noopener noreferrer';
     a.textContent=x.title;
+
     return a.outerHTML;
+
   }).join('');
+
 })
 .catch(function(){
+
   document.getElementById('links').textContent='โหลดข้อมูลไม่ได้';
+
 });
+
+
+/* =========================
+   YouTube Music
+========================= */
+
+var player;
+var musicStarted=false;
+var musicOn=false;
+
+/* โหลด YouTube API */
+var tag=document.createElement('script');
+tag.src="https://www.youtube.com/iframe_api";
+document.head.appendChild(tag);
+
+
+/* YouTube เรียกฟังก์ชันนี้เอง */
+function onYouTubeIframeAPIReady(){
+
+  player=new YT.Player('youtube-player',{
+
+    width:'1',
+    height:'1',
+
+    videoId:'nqM0ss9quo8',
+
+    playerVars:{
+      autoplay:1,
+      controls:0,
+      loop:1,
+      playlist:'nqM0ss9quo8',
+      playsinline:1,
+      rel:0
+    },
+
+    events:{
+
+      onReady:function(event){
+
+        /*
+          autoplay แบบเงียบก่อน
+          เพราะมือถือหลายเครื่องบล็อก autoplay
+          ที่มีเสียง
+        */
+
+        event.target.mute();
+        event.target.playVideo();
+
+        musicStarted=true;
+
+        document
+          .getElementById('musicBtn')
+          .classList.add('playing');
+
+      },
+
+      onStateChange:function(event){
+
+        if(event.data === YT.PlayerState.ENDED){
+
+          event.target.playVideo();
+
+        }
+
+      }
+
+    }
+
+  });
+
+}
+
+
+/* =========================
+   ปุ่มเพลง
+========================= */
+
+function toggleMusic(){
+
+  if(!player){
+    return;
+  }
+
+  var btn=document.getElementById('musicBtn');
+
+  /*
+    ถ้ายังไม่ได้เปิดเสียง
+    แตะครั้งแรก = เปิดเสียง
+  */
+
+  if(!musicOn){
+
+    player.unMute();
+    player.setVolume(100);
+    player.playVideo();
+
+    musicOn=true;
+
+    btn.textContent='🔊';
+    btn.classList.add('playing');
+
+    return;
+
+  }
+
+
+  /*
+    ถ้าเปิดอยู่ = ปิดเสียง
+  */
+
+  player.mute();
+
+  musicOn=false;
+
+  btn.textContent='🔇';
+  btn.classList.remove('playing');
+
+}
+
 </script>
+
 </body>
 </html>`;
 }
